@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Xolair 經營島</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- 3D 舞台 -->
+  <main id="stage">
+    <div id="labels"></div>
+
+    <div class="hud-left">
+      <div class="brand">
+        <div class="brand-mark">XOLAIR<span>.</span></div>
+        <div class="brand-sub">
+          <b>經營島</b>
+          <small>ISLAND OPS · <span id="repNameBrand">業務</span></small>
+        </div>
+      </div>
+      <div class="pills">
+        <div class="pill" id="timePill" role="group" aria-label="時段">
+          <button data-time="dawn" title="清晨">🌅</button>
+          <button data-time="day" class="on" title="白天">☀️</button>
+          <button data-time="dusk" title="黃昏">🌇</button>
+          <button data-time="night" title="夜晚">🌙</button>
+        </div>
+        <div class="pill tools" id="toolPill" role="group" aria-label="工具">
+          <button data-tool="labels" class="on"><i>🏷️</i><span>名牌</span></button>
+          <button data-tool="follow"><i>🚶</i><span>跟隨</span></button>
+          <button data-tool="lines"><i>🔗</i><span>協作線</span></button>
+          <button data-tool="pause"><i>⏸</i><span>暫停</span></button>
+          <button data-tool="bird"><i>🗺️</i><span>鳥瞰</span></button>
+          <button data-tool="log"><i>📒</i><span>日誌</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <button class="chip-btn" id="btnHome">↗ 全景</button>
+      <button class="chip-btn" id="btnRole">☺ 角色</button>
+      <button class="chip-btn" id="btnList">☰ 清單</button>
+      <button class="chip-btn sq" id="btnHelp" aria-label="導覽">?</button>
+    </div>
+
+    <div class="zoom">
+      <button id="zIn" aria-label="放大">＋</button>
+      <button id="zOut" aria-label="縮小">－</button>
+    </div>
+
+    <button class="fab" id="fabAdd">＋ 新增活動</button>
+
+    <!-- 島嶼詳細卡 -->
+    <section id="detail" class="card detail hidden" aria-live="polite"></section>
+  </main>
+
+  <!-- 右側索引 -->
+  <aside id="panel">
+    <div class="panel-grip" id="panelGrip"></div>
+    <header class="panel-head">
+      <div class="eyebrow">THE XOLAIR INDEX</div>
+      <h1>把每一次拜訪，<br>連起來。</h1>
+      <p class="meta" id="metaLine"></p>
+    </header>
+
+    <button class="cta" id="btnImport">
+      <div><b>匯入我的客戶名單</b><small>CSV / Excel，每家醫院自動長成一座島</small></div><span>›</span>
+    </button>
+
+    <input id="search" class="search" type="search" placeholder="搜尋醫院、醫師、科別、活動…">
+
+    <div class="tabs" role="tablist">
+      <button class="on" data-tab="islands">島嶼</button>
+      <button data-tab="customers">客戶 <em id="cntCust"></em></button>
+      <button data-tab="log">日誌 <em id="cntLog"></em></button>
+    </div>
+    <div id="list" class="list"></div>
+  </aside>
+
+  <!-- 角色抽屜 -->
+  <aside id="role" class="drawer hidden">
+    <header><div class="eyebrow">MY CHARACTER</div><h2>角色</h2><button class="x" data-close="role">✕</button></header>
+    <label>名字<input id="repName" placeholder="幫你的業務小人取名字"></label>
+    <label>負責區域<input id="repTerritory" placeholder="例如：大台北 / 胸腔 + 皮膚"></label>
+    <div class="field-label">制服顏色</div>
+    <div class="swatches" id="swatches"></div>
+    <div class="field-label">移動</div>
+    <div class="row-btns">
+      <button class="btn" data-go="daily">回日常島</button>
+      <button class="btn" data-go="core">去核心島</button>
+    </div>
+    <div class="field-label">資料</div>
+    <div class="row-btns">
+      <button class="btn" id="btnExport">匯出備份 JSON</button>
+      <label class="btn file">匯入備份<input type="file" id="fileBackup" accept=".json" hidden></label>
+    </div>
+    <button class="btn danger" id="btnReset">清除所有資料，回到範例</button>
+    <p class="fine">資料只儲存在這台裝置的瀏覽器裡，不會上傳。換電腦時請用「匯出備份」。</p>
+  </aside>
+</div>
+
+<!-- 對話框 -->
+<div id="modal" class="modal hidden"><div class="modal-card" id="modalCard"></div></div>
+<div id="toast" class="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/world.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
