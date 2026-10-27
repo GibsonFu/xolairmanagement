@@ -1,7 +1,7 @@
 /* Xolair 經營島 — 介面、資料與互動 */
 (function () {
   const W = XI.world;
-  const KEY = 'xolair-island-v1';
+  const KEY = 'xolair-island-v2';
   const $ = s => document.querySelector(s);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const today = () => new Date().toISOString().slice(0, 10);
@@ -205,7 +205,7 @@
       h += `<div class="row ${ui.selected === z.id ? 'sel' : ''}" data-sel="${z.id}"><div class="num">${z.no}</div><div class="t"><b>${esc(z.name)}</b><small>${esc(z.tagline)}</small></div><div class="r">${cnt} ↗</div></div>`;
       if (ui.selected === z.id) h += `<div class="sub"><a class="go" data-fly="${z.id}">探索此島 ↗</a>${z.items.map((it, i) => `<a data-sel="${z.id}">${'①②③④⑤⑥'[i] || '·'}　${esc(it.t)}</a>`).join('')}</div>`;
     });
-    h += '<div class="group-h">醫院客戶</div>';
+    h += '<div class="group-h" style="display:flex;justify-content:space-between;align-items:center">醫院客戶<button class="btn" data-addhosp="1" style="padding:5px 10px;font-size:12px">＋ 新增醫院</button></div>';
     const hs = S.hospitals.filter(x => !q || (x.name + x.region + x.doctors.map(d => d.name + d.dept).join()).toLowerCase().includes(q));
     if (!hs.length) h += '<div class="empty">沒有符合的醫院</div>';
     hs.forEach(x => {
@@ -215,7 +215,7 @@
     return h;
   }
   function customersTab(q) {
-    let h = `<div class="filters">${['全部', 'A', 'B', 'C'].map(l => `<button data-lv="${l}" class="${(ui.lv || '全部') === l ? 'on' : ''}">${l === '全部' ? '全部醫師' : l + ' 級'}</button>`).join('')}</div>`;
+    let h = `<button class="btn" data-addhosp="1" style="width:100%;margin-top:6px">＋ 新增醫院</button><div class="filters">${['全部', 'A', 'B', 'C'].map(l => `<button data-lv="${l}" class="${(ui.lv || '全部') === l ? 'on' : ''}">${l === '全部' ? '全部醫師' : l + ' 級'}</button>`).join('')}</div>`;
     const lv = ui.lv && ui.lv !== '全部' ? ui.lv : null;
     let any = false;
     S.hospitals.forEach(x => {
@@ -305,7 +305,7 @@
       <p class="tagline">${esc(h.region || '未填區域')} · ${depts.length ? esc(depts.join('、')) : '未填科別'}</p>
       <div class="chips"><span>${h.doctors.length} 位醫師</span><span>A ${lv.A} · B ${lv.B} · C ${lv.C}</span><span>${acts.length} 場活動</span>${walkBtn(h.id)}</div>
       <div class="act-btns">${Object.entries(XI.ACT_TYPES).map(([k, t]) => `<button style="background:${t.color}" data-new="${k}" data-h="${h.id}">＋ ${t.name}</button>`).join('')}</div></div>
-      <div class="body"><div class="sec-h">醫師名單</div>${h.doctors.length ? h.doctors.slice().sort((a, b) => a.level.localeCompare(b.level)).map(d => docRow(h, d)).join('') : '<div class="empty">這家醫院還沒有醫師資料</div>'}
+      <div class="body"><div class="sec-h" style="display:flex;justify-content:space-between;align-items:center">醫師名單<span class="row-btns"><button class="btn" data-addhosp="${h.id}" style="padding:4px 9px;font-size:12px">✎ 編輯 / ＋ 醫師</button></span></div>${h.doctors.length ? h.doctors.slice().sort((a, b) => a.level.localeCompare(b.level)).map(d => docRow(h, d)).join('') : '<div class="empty">這家醫院還沒有醫師資料</div>'}
       <div class="sec-h">活動紀錄</div>${acts.length ? acts.map(actRow).join('') : '<div class="empty" style="padding:12px">尚無活動，從上方按鈕新增</div>'}</div>`;
   }
 
@@ -347,6 +347,62 @@
       if (e.target.id === 'fDel' && confirm('確定刪除這筆活動？')) { S.activities = S.activities.filter(x => x.id !== ex.id); save(); hideModal(); refreshAll(); toast('已刪除'); }
     };
     $('#modalCard').onchange = e => { if (e.target.id === 'fHosp') { grab(); a.hospitalId = e.target.value; a.doctorIds = []; draw(); } };
+  }
+
+  /* ---------- 新增 / 編輯醫院 ---------- */
+  function openHospital(editId) {
+    const ex = editId ? hospById(editId) : null;
+    const f = ex ? { name: ex.name, tier: ex.tier, region: ex.region, doctors: ex.doctors.map(d => ({ ...d })) }
+      : { name: '', tier: '區域醫院', region: '', doctors: [{ name: '', dept: '', title: '', level: 'B', note: '' }] };
+    const grab = () => {
+      f.name = $('#hName').value.trim(); f.tier = $('#hTier').value; f.region = $('#hRegion').value.trim();
+      document.querySelectorAll('.drow').forEach((r, i) => {
+        const v = k => r.querySelector(`[data-k=${k}]`).value.trim();
+        Object.assign(f.doctors[i], { name: v('name'), dept: v('dept'), title: v('title'), level: v('level') });
+      });
+    };
+    const draw = () => {
+      $('#modalCard').className = 'modal-card';
+      $('#modalCard').innerHTML = `<button class="x" data-close="modal" style="top:16px;right:16px">✕</button>
+        <div class="eyebrow">${ex ? 'EDIT HOSPITAL' : 'NEW HOSPITAL'}</div><h3>${ex ? '編輯醫院' : '新增醫院'}</h3>
+        ${ex ? '' : '<p>儲存後，外圈會長出一座新的醫院島。</p>'}
+        <label class="f">醫院名稱<input id="hName" value="${esc(f.name)}" placeholder="例如：○○紀念醫院"></label>
+        <div class="two"><label class="f">醫院層級<select id="hTier">${XI.TIERS.map(t => `<option ${t === f.tier ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label class="f">區域<input id="hRegion" value="${esc(f.region)}" placeholder="例如：台北"></label></div>
+        <div class="sec-h" style="margin-top:18px">醫師</div>
+        ${f.doctors.map((d, i) => `<div class="drow" style="display:grid;grid-template-columns:1.2fr 1.2fr 1fr 64px 30px;gap:6px;margin-bottom:6px">
+          <input data-k="name" value="${esc(d.name)}" placeholder="姓名" style="margin:0">
+          <input data-k="dept" value="${esc(d.dept)}" placeholder="科別" style="margin:0">
+          <input data-k="title" value="${esc(d.title)}" placeholder="職稱" style="margin:0">
+          <select data-k="level" style="margin:0">${XI.LEVELS.map(l => `<option ${l === d.level ? 'selected' : ''}>${l}</option>`).join('')}</select>
+          <button type="button" data-rmdoc="${i}" title="移除" style="color:var(--ink-3)">✕</button></div>`).join('')}
+        <button type="button" class="btn" id="hAddDoc" style="padding:6px 12px;font-size:13px">＋ 再加一位醫師</button>
+        <div class="foot">${ex ? '<button class="btn danger" style="margin:0;width:auto" id="hDel">刪除醫院</button>' : '<span></span>'}
+        <div class="row-btns"><button class="btn" data-close="modal">取消</button><button class="btn primary" id="hSave">${ex ? '儲存' : '建立醫院島 🏝️'}</button></div></div>`;
+    };
+    draw(); showModal(); $('#hName').focus();
+    $('#modalCard').onclick = e => {
+      if (e.target.id === 'hAddDoc') { grab(); f.doctors.push({ name: '', dept: '', title: '', level: 'B', note: '' }); draw(); return; }
+      const rm = e.target.closest('[data-rmdoc]'); if (rm) { grab(); f.doctors.splice(+rm.dataset.rmdoc, 1); draw(); return; }
+      if (e.target.id === 'hDel') {
+        if (!confirm(`確定刪除「${ex.name}」？這家醫院的活動紀錄會保留在日誌裡。`)) return;
+        S.hospitals = S.hospitals.filter(h => h.id !== ex.id); S.sample = false; save(); hideModal();
+        ui.selected = null; W.setHospitals(S.hospitals); refreshAll(); toast('已刪除醫院'); return;
+      }
+      if (e.target.id === 'hSave') {
+        grab();
+        if (!f.name) { toast('請填醫院名稱'); $('#hName').focus(); return; }
+        const id = ex ? ex.id : 'h_' + hash(f.name);
+        if (!ex && hospById(id)) { toast('名單裡已經有這家醫院'); return; }
+        const doctors = f.doctors.filter(d => d.name).map(d => ({ ...d, id: d.id || id + '_' + hash(d.name + '|' + d.dept + '|' + uid()), note: d.note || '' }));
+        if (ex) Object.assign(ex, { name: f.name, tier: f.tier, region: f.region, doctors });
+        else S.hospitals.push({ id, name: f.name, tier: f.tier, region: f.region, doctors });
+        S.sample = false; save(); hideModal();
+        W.setHospitals(S.hospitals, ex ? null : id); refreshAll();
+        if (!ex) { W.home(); setTimeout(() => select(id, { fly: true }), 900); toast(`🏝️ ${f.name} 島長出來了`); }
+        else { renderDetail(); toast('已更新'); }
+      }
+    };
   }
 
   /* ---------- 匯入名單 ---------- */
@@ -431,7 +487,7 @@
 
   /* ---------- 事件 ---------- */
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-sel],[data-fly],[data-new],[data-edit],[data-walk],[data-close],[data-lv],[data-lf],[data-deltodo],[data-go],[data-color]');
+    const t = e.target.closest('[data-sel],[data-fly],[data-new],[data-edit],[data-walk],[data-close],[data-lv],[data-lf],[data-deltodo],[data-go],[data-color],[data-addhosp]');
     if (!t) return;
     const d = t.dataset;
     if (d.new) { e.stopPropagation(); return openActivity({ type: d.new, h: d.h, d: d.d }); }
@@ -444,6 +500,7 @@
     if (d.close === 'role') return $('#role').classList.add('hidden');
     if (d.lv) { ui.lv = d.lv; return renderList(); }
     if (d.lf) { ui.logFilter = d.lf; return renderList(); }
+    if (d.addhosp) return openHospital(d.addhosp === '1' ? null : d.addhosp);
     if (d.deltodo) { S.todos = S.todos.filter(x => x.id !== d.deltodo); save(); return renderDetail(); }
     if (d.go) { W.walkRepTo(d.go); $('#role').classList.add('hidden'); return; }
     if (d.color) { S.rep.color = d.color; W.repColor(d.color); save(); return renderRole(); }

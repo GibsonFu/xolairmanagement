@@ -426,7 +426,18 @@
   }
 
   /* ---------- 醫院島（依名單產生） ---------- */
-  W.setHospitals = function (hospitals) {
+  // 固定槽位：每家醫院依加入順序取得固定位置，新增醫院不會打亂原本的島
+  const RING_CAP = [12, 18, 24, 30, 36];
+  function slotOf(k) {
+    let ri = 0; while (ri < RING_CAP.length - 1 && k >= RING_CAP[ri]) { k -= RING_CAP[ri]; ri++; }
+    const cap = RING_CAP[ri], used = new Set();
+    let s = 0;
+    for (let i = 0; i <= k; i++) { s = Math.floor(((i * 0.6180339887) % 1) * cap); while (used.has(s)) s = (s + 1) % cap; used.add(s); }
+    const off = ri % 2 ? Math.PI / cap : 0.12;
+    return { r: 52 + ri * 20, a: off + s / cap * Math.PI * 2 };
+  }
+
+  W.setHospitals = function (hospitals, growId) {
     // 清除舊的
     for (const id of Object.keys(islands)) if (islands[id].kind === 'hospital') {
       const i = pickables.indexOf(islands[id].group); if (i >= 0) pickables.splice(i, 1);
@@ -434,16 +445,10 @@
     }
     while (hospGroup.children.length) hospGroup.remove(hospGroup.children[0]);
 
-    const n = hospitals.length; if (!n) { W.updateLines([]); return; }
-    // 依數量分層排列
-    const rings = []; let left = n, ringIdx = 0;
-    while (left > 0) { const cap = [12, 18, 24, 30][Math.min(ringIdx, 3)]; const take = Math.min(cap, left); rings.push(take); left -= take; ringIdx++; }
-    let k = 0;
-    rings.forEach((cnt, ri) => {
-      const r = 52 + ri * 20; const off = ri % 2 ? Math.PI / cnt : 0.12;
-      for (let j = 0; j < cnt; j++, k++) {
-        const h = hospitals[k];
-        const a = off + j / cnt * Math.PI * 2;
+    if (!hospitals.length) { W.updateLines([]); return; }
+    hospitals.forEach((h, k) => {
+      {
+        const { r, a } = slotOf(k);
         const radius = { '醫學中心': 7.5, '區域醫院': 6.4, '地區醫院': 5.4, '診所': 4.4 }[h.tier] || 5.4;
         const isl = addIsland(h.id, a, r, radius, ['#8cbf6a', '#9cc77a', '#7fb46a'][k % 3], 'hospital', { name: h.name });
         const R = rnd(hash(h.id) + 11);
@@ -460,7 +465,8 @@
           p.position.set(Math.cos(pa) * radius * 0.6, Y, Math.sin(pa) * radius * 0.6);
           isl.group.add(p); isl.people.push(p);
         });
-        bridge(a, RING_R + 1.2, r - radius * 1.05, hospGroup);
+        const br = bridge(a, RING_R + 1.2, r - radius * 1.05, hospGroup);
+        if (h.id === growId) { isl.grow = 0; isl.group.scale.setScalar(0.01); br.scale.set(0.01, 1, 1); isl.bridge = br; }
       }
     });
   };
@@ -598,6 +604,13 @@
       } else animateLimbs(rep, tAcc, false);
       rep.position.y = Y;
     }
+    Object.values(islands).forEach(isl => {
+      if (isl.grow === undefined) return;
+      isl.grow += dt; const t = Math.min(1, isl.grow / 1.4);
+      const e = 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);   // 彈出效果
+      isl.group.scale.setScalar(Math.max(0.01, e)); isl.bridge.scale.x = Math.max(0.01, Math.min(1, t * 1.6));
+      if (t >= 1) { isl.group.scale.setScalar(1); isl.bridge.scale.x = 1; delete isl.grow; }
+    });
     for (let i = pops.length - 1; i >= 0; i--) {
       const q = pops[i]; q.t += dt; q.s.position.y += dt * 2.5; q.s.material.opacity = Math.max(0, 1 - q.t / 2.6);
       if (q.t > 2.6) { scene.remove(q.s); pops.splice(i, 1); }
